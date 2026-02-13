@@ -34,7 +34,7 @@ const Welcome = () => {
             await deferredPrompt.userChoice;
             setDeferredPrompt(null);
         } else {
-            alert('Para instalar, use o menu do navegador e selecione "Instalar aplicativo" ou "Adicionar à tela inicial".');
+            alert('Use o menu do navegador (⋮) e selecione "Instalar aplicativo" ou "Adicionar à tela inicial".');
         }
     };
 

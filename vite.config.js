@@ -8,24 +8,20 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['tools-icon.svg'],
       manifest: {
-        name: 'Marido de Aluguel Pro',
-        short_name: 'Marido Pro',
-        description: 'Calculadora de orçamento para profissionais',
-        theme_color: '#FF9800',
+        name: 'Preço Certo Marido de Aluguel',
+        short_name: 'Preço Certo',
+        description: 'Calculadora de orçamento para marido de aluguel',
+        theme_color: '#0d47a1',
         background_color: '#F5F7FA',
         display: 'standalone',
         icons: [
           {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            src: 'tools-icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
           }
         ]
       }
