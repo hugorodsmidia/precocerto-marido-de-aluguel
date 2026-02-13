@@ -7,6 +7,7 @@ import Header from './Header';
 const Layout = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const isWelcome = location.pathname === '/welcome';
 
     const navItems = [
         { path: '/welcome', icon: Home, label: 'Início' },
@@ -17,27 +18,29 @@ const Layout = () => {
 
     return (
         <div className="layout">
-            <Header />
+            {!isWelcome && <Header />}
             <main style={{ flex: 1 }}>
                 <Outlet />
             </main>
 
-            <nav className="bottom-nav">
-                {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.path;
-                    return (
-                        <button
-                            key={item.path}
-                            className={`nav-item ${isActive ? 'active' : ''}`}
-                            onClick={() => navigate(item.path)}
-                        >
-                            <Icon size={24} />
-                            <span>{item.label}</span>
-                        </button>
-                    );
-                })}
-            </nav>
+            {!isWelcome && (
+                <nav className="bottom-nav">
+                    {navItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <button
+                                key={item.path}
+                                className={`nav-item ${isActive ? 'active' : ''}`}
+                                onClick={() => navigate(item.path)}
+                            >
+                                <Icon size={24} />
+                                <span>{item.label}</span>
+                            </button>
+                        );
+                    })}
+                </nav>
+            )}
         </div>
     );
 };
