@@ -150,8 +150,8 @@ const Calculator = () => {
                             </div>
                         )}
 
-                        {/* Step 2: Dados do Serviço */}
-                        {currentStep === 2 && (
+                        {/* Step 4: Logística */}
+                        {currentStep === 4 && (
                             <div className="card fade-in">
                                 <h3 style={{ marginTop: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <MapPin size={20} /> Logística
@@ -295,8 +295,8 @@ const Calculator = () => {
                             </div>
                         )}
 
-                        {/* Step 4: Serviços (Final) */}
-                        {currentStep === 4 && (
+                        {/* Step 2: Serviços */}
+                        {currentStep === 2 && (
                             <div className="card fade-in">
                                 <h3 style={{ marginTop: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Package size={20} /> Serviços
