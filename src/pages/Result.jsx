@@ -20,13 +20,27 @@ const Result = () => {
     }
 
     const { result, inputData } = state;
+    const professionalName = user?.name || 'Profissional';
 
     const handleWhatsApp = () => {
         const greeting = inputData.clientName ? `Olá ${inputData.clientName}!` : 'Olá!';
 
+        // Services list
+        let servicesText = '';
+        if (inputData.additionalServices && inputData.additionalServices.length > 0) {
+            const list = inputData.additionalServices.map(s => {
+                const price = parseFloat(s.price) || 0;
+                return `  • ${s.name} — R$ ${price.toFixed(2)}`;
+            }).join('\n');
+            servicesText = `\n*Serviços:*\n${list}`;
+        } else if (inputData.selectedServices && inputData.selectedServices.length > 0) {
+            servicesText = `\n*Serviços:* ${inputData.selectedServices.join(', ')}`;
+        }
+
+        // Materials list
         let materialsText = '';
         if (inputData.materials && inputData.materials.length > 0) {
-            const list = inputData.materials.map(m => `- ${m.qty}x ${m.name}`).join('\n');
+            const list = inputData.materials.map(m => `  • ${m.qty}x ${m.name}`).join('\n');
             if (inputData.materialsProvider === 'client') {
                 materialsText = `\n*Materiais (Comprar):*\n${list}`;
             } else {
@@ -34,25 +48,27 @@ const Result = () => {
             }
         }
 
-        const message = `${greeting} Aqui está o orçamento:
-    \n*Serviços:* ${inputData.selectedServices.join(', ') || 'Manutenção Geral'}
-    \n*Tempo:* ${inputData.totalHours}h${materialsText}
-    \n*Total:* R$ ${result.total.toFixed(2)}
-    \nEnviado via Marido de Aluguel Pro.`;
+        const message = `${greeting} Segue o orçamento:${servicesText}${materialsText}\n\n*Total: R$ ${result.total.toFixed(2)}*\n\n_${professionalName}_`;
 
         const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
     };
 
     const handleSave = () => {
-        // Save to history
         addHistoryItem({
+            id: Date.now(),
             date: new Date().toISOString(),
             client: inputData.clientName,
+            address: inputData.clientAddress,
             total: result.total,
-            services: inputData.selectedServices
+            services: inputData.additionalServices || [],
+            materials: inputData.materials || [],
+            // Dados completos para reabrir o orçamento
+            result,
+            inputData
         });
-        navigate('/welcome'); // Back to home
+        alert('Orçamento salvo no histórico!');
+        navigate('/calculator');
     };
 
     return (
@@ -64,6 +80,7 @@ const Result = () => {
                 <h1 style={{ fontSize: '1.5rem' }}>Orçamento Final</h1>
             </header>
 
+            {/* Client + Total */}
             <div className="card" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
                 <div style={{ marginBottom: '1rem' }}>
                     <h2 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
@@ -77,41 +94,49 @@ const Result = () => {
                     )}
                 </div>
 
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Valor Sugerido </p>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Valor Sugerido</p>
                 <h2 style={{ fontSize: '2.5rem', color: 'var(--primary)', marginBottom: '1rem' }}>
                     R$ {result.total.toFixed(2)}
                 </h2>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-                    <span style={{ fontSize: '1rem', background: '#E8F5E9', color: 'var(--success)', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold' }}>
-                        Lucro Líquido: R$ {(result.total - result.breakdown.displacement - result.breakdown.taxes - result.breakdown.tools - result.breakdown.supplies).toFixed(2)}
-                    </span>
-                </div>
 
+                {/* Services Summary */}
+                {inputData.additionalServices && inputData.additionalServices.length > 0 && (
+                    <div style={{ textAlign: 'left', marginTop: '12px', padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
+                        <strong style={{ fontSize: '0.9rem', color: 'var(--secondary)' }}>Serviços:</strong>
+                        {inputData.additionalServices.map((s, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '0.9rem' }}>
+                                <span>{s.name}</span>
+                                <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>R$ {parseFloat(s.price).toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Materials Summary */}
                 {inputData.materials && inputData.materials.length > 0 && (
-                    <div className="card" style={{ marginTop: '16px' }}>
-                        <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', fontSize: '1.2rem', color: 'var(--primary)' }}>
-                            {inputData.materialsProvider === 'client' ? 'Lista de Compras (Cliente)' : 'Materiais Fornecidos (Profissional)'}
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {inputData.materials.map((m, i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f0f0f0', paddingBottom: '4px' }}>
-                                    <span>{m.qty}x {m.name}</span>
-                                    {inputData.materialsProvider === 'professional' && (
-                                        <span style={{ color: '#666' }}>R$ {(parseFloat(m.price) * m.qty).toFixed(2)}</span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                    <div style={{ textAlign: 'left', marginTop: '12px', padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
+                        <strong style={{ fontSize: '0.9rem', color: 'var(--secondary)' }}>
+                            {inputData.materialsProvider === 'client' ? 'Materiais (Cliente compra):' : 'Materiais (Incluso):'}
+                        </strong>
+                        {inputData.materials.map((m, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '0.9rem' }}>
+                                <span>{m.qty}x {m.name}</span>
+                                {inputData.materialsProvider === 'professional' && (
+                                    <span style={{ color: '#666' }}>R$ {(parseFloat(m.price) * m.qty).toFixed(2)}</span>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
 
+            {/* Breakdown */}
             <div className="card">
                 <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>Detalhamento</h3>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span>Mão de Obra ({inputData.totalHours}h)</span>
-                    <span>R$ {result.breakdown.labor.toFixed(2)}</span>
+                    <span>Serviços</span>
+                    <span>R$ {result.breakdown.services.toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span>Deslocamento</span>
@@ -122,17 +147,37 @@ const Result = () => {
                     <span>R$ {result.breakdown.supplies.toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}>
-                    <span>Taxas/Ferramentas</span>
-                    <span>R$ {(result.breakdown.taxes + result.breakdown.tools).toFixed(2)}</span>
+                    <span>Ferramentas (depr.)</span>
+                    <span>R$ {result.breakdown.tools.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}>
+                    <span>Impostos/MEI</span>
+                    <span>R$ {result.breakdown.taxes.toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
-                    <span>Margem Segurança</span>
+                    <span>Margem Segurança (10%)</span>
                     <span>R$ {result.breakdown.margin.toFixed(2)}</span>
                 </div>
             </div>
 
+            {/* Internal Metrics */}
+            {inputData.totalHours > 0 && (
+                <div className="card" style={{ background: '#FFF8E1', border: '1px solid #FFE082' }}>
+                    <h3 style={{ marginBottom: '8px', fontSize: '0.9rem', color: '#F57F17' }}>📊 Métricas Internas (só você vê)</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                        <span>Custo real mão de obra ({inputData.totalHours}h)</span>
+                        <span>R$ {result.internalMetrics.realLaborCost.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                        <span>Valor/hora efetivo</span>
+                        <span>R$ {result.internalMetrics.effectiveHourlyRate.toFixed(2)}/h</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Actions */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                <button className="btn btn-secondary" onClick={() => generatePDF(inputData, result, user)}>
+                <button className="btn btn-secondary" onClick={() => generatePDF(inputData, result, user, professionalName)}>
                     <FileText />
                     PDF
                 </button>
@@ -146,7 +191,6 @@ const Result = () => {
                 <Home />
                 Finalizar e Salvar
             </button>
-
         </div>
     );
 };

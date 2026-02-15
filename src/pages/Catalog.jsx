@@ -109,7 +109,9 @@ const Catalog = () => {
                                         R$ {item.value.toFixed(2)}
                                     </span>
                                     <button
-                                        onClick={() => removePrice(item.id)}
+                                        onClick={() => {
+                                            if (confirm('Remover este preço?')) removePrice(item.id);
+                                        }}
                                         style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}
                                     >
                                         <Trash2 size={18} />

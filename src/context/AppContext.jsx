@@ -10,13 +10,14 @@ export const AppProvider = ({ children }) => {
 
     // Default settings
     const defaultSettings = {
+        businessName: 'Preço Certo Marido de Aluguel',
         fuelPrice: 5.50,
-        fuelConsumption: 10, // km/L
-        maintenanceCost: 0.20, // R$/km
+        fuelConsumption: 10,
+        maintenanceCost: 0.20,
         hourlyRate: 50.00,
         monthlyGoal: 5000,
         toolKitValue: 3000,
-        taxRate: 0.05 // 5% example
+        taxRate: 5
     };
 
     const [settings, setSettings] = useState(() => {

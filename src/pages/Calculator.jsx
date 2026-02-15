@@ -6,7 +6,7 @@ import { fetchReferencePrices } from '../utils/prices';
 import { ChevronRight, User, MapPin, Package, Trash2, Plus } from 'lucide-react';
 
 const Calculator = () => {
-    const { settings, myPrices } = useApp();
+    const { settings, myPrices, history } = useApp();
     const navigate = useNavigate();
 
     // View State
@@ -67,8 +67,21 @@ const Calculator = () => {
         navigate('/result', { state: { result, inputData } });
     };
 
-    // Wizard Navigation logic
-    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4));
+    // Wizard Navigation logic — auto-add pending items before advancing
+    const nextStep = () => {
+        // Step 2: auto-add pending service
+        if (currentStep === 2 && newServiceItem.name && newServiceItem.price) {
+            setAddedServices(prev => [...prev, { ...newServiceItem, id: Date.now() }]);
+            setNewServiceItem({ name: '', price: '' });
+            setSuggestions([]);
+        }
+        // Step 3: auto-add pending material
+        if (currentStep === 3 && newItem.name) {
+            setMaterials(prev => [...prev, { ...newItem, id: Date.now() }]);
+            setNewItem({ name: '', qty: 1, price: '' });
+        }
+        setCurrentStep(prev => Math.min(prev + 1, 4));
+    };
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
     // Progress Bar Component
@@ -453,8 +466,20 @@ const Calculator = () => {
                             </div>
                         ) : (
                             history.map((item, index) => (
-                                <div key={index} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                    <div>
+                                <div
+                                    key={item.id || index}
+                                    className="card"
+                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', cursor: item.result ? 'pointer' : 'default', transition: 'transform 0.15s ease, box-shadow 0.15s ease' }}
+                                    onClick={() => {
+                                        if (item.result && item.inputData) {
+                                            navigate('/result', { state: { result: item.result, inputData: item.inputData } });
+                                        }
+                                    }}
+                                    onMouseDown={e => { if (item.result) e.currentTarget.style.transform = 'scale(0.98)'; }}
+                                    onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                                >
+                                    <div style={{ flex: 1 }}>
                                         <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '4px' }}>
                                             {item.client || 'Cliente não informado'}
                                         </div>
@@ -462,13 +487,18 @@ const Calculator = () => {
                                             {item.date ? new Date(item.date).toLocaleDateString() : 'Data desconhecida'} - {item.date ? new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                         </div>
                                         <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '4px', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {Array.isArray(item.services) ? item.services.join(', ') : 'Serviços não listados'}
+                                            {Array.isArray(item.services)
+                                                ? item.services.map(s => typeof s === 'string' ? s : s.name).join(', ')
+                                                : 'Serviços não listados'}
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
+                                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                                             R$ {Number(item.total || 0).toFixed(2)}
                                         </div>
+                                        {item.result && (
+                                            <ChevronRight size={20} color="#999" />
+                                        )}
                                     </div>
                                 </div>
                             ))

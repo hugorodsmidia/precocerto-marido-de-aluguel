@@ -1,6 +1,8 @@
-import { supabase } from '../supabaseClient';
+/**
+ * Preços de referência — dados locais (sem Supabase)
+ */
 
-const MOCK_PRICES = [
+const REFERENCE_PRICES = [
     // Elétrica
     { id: 101, category: 'Elétrica', name: 'Troca de Chuveiro Simples', min: 90, max: 150 },
     { id: 102, category: 'Elétrica', name: 'Troca de Chuveiro Elétrico/Eletrônico', min: 120, max: 180 },
@@ -43,17 +45,5 @@ const MOCK_PRICES = [
 ];
 
 export const fetchReferencePrices = async () => {
-    if (!supabase) return MOCK_PRICES;
-
-    try {
-        const { data, error } = await supabase
-            .from('reference_prices')
-            .select('*');
-
-        if (error) throw error;
-        return data && data.length > 0 ? data : MOCK_PRICES;
-    } catch (error) {
-        console.warn('Supabase fetch failed, using mock data:', error);
-        return MOCK_PRICES;
-    }
+    return REFERENCE_PRICES;
 };
