@@ -8,9 +8,11 @@ import Result from './pages/Result';
 
 import { AppProvider, useApp } from './context/AppContext';
 
-// Protected route: redirects to /welcome if not logged in
+// Enquanto o contexto carrega do localStorage, não renderiza nada
+// Isso evita redirect prematuro para /welcome
 const ProtectedRoute = ({ children }) => {
-  const { user } = useApp();
+  const { user, isLoading } = useApp();
+  if (isLoading) return null;
   if (!user) return <Navigate to="/welcome" replace />;
   return children;
 };

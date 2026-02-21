@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Save, Download, Upload } from 'lucide-react';
+import { Save, Download, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 
 const Settings = () => {
-    const { settings, updateSettings } = useApp();
+    const { settings, updateSettings, exportBackup, importBackup } = useApp();
     const [formData, setFormData] = useState(settings);
     const [saved, setSaved] = useState(false);
     const [showCalcInfo, setShowCalcInfo] = useState(false);
+    const [backupStatus, setBackupStatus] = useState(null); // null | 'exporting' | 'success' | 'error'
+    const [backupMessage, setBackupMessage] = useState('');
 
     useEffect(() => {
         setFormData(settings);
@@ -27,42 +29,35 @@ const Settings = () => {
         setTimeout(() => setSaved(false), 2000);
     };
 
-    // Backup / Export
     const handleExport = () => {
-        const data = {
-            settings: JSON.parse(localStorage.getItem('marido_pro_settings') || '{}'),
-            myPrices: JSON.parse(localStorage.getItem('marido_pro_myprices') || '[]'),
-            history: JSON.parse(localStorage.getItem('marido_pro_history') || '[]'),
-            user: JSON.parse(localStorage.getItem('marido_pro_user') || 'null'),
-            exportDate: new Date().toISOString()
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `preco_certo_backup_${new Date().toISOString().slice(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        try {
+            exportBackup();
+            setBackupStatus('success');
+            setBackupMessage(`Backup exportado em ${new Date().toLocaleString('pt-BR')}`);
+        } catch {
+            setBackupStatus('error');
+            setBackupMessage('Erro ao gerar o arquivo de backup.');
+        }
+        setTimeout(() => setBackupStatus(null), 4000);
     };
 
-    const handleImport = (e) => {
+    const handleImport = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const data = JSON.parse(evt.target.result);
-                if (data.settings) localStorage.setItem('marido_pro_settings', JSON.stringify(data.settings));
-                if (data.myPrices) localStorage.setItem('marido_pro_myprices', JSON.stringify(data.myPrices));
-                if (data.history) localStorage.setItem('marido_pro_history', JSON.stringify(data.history));
-                if (data.user) localStorage.setItem('marido_pro_user', JSON.stringify(data.user));
-                alert('Backup restaurado! O app será recarregado.');
-                window.location.reload();
-            } catch {
-                alert('Arquivo de backup inválido.');
-            }
-        };
-        reader.readAsText(file);
+        // Reseta o input para permitir reimportar o mesmo arquivo
+        e.target.value = '';
+        if (!window.confirm('Isso vai sobrescrever seus dados atuais com o backup. Continuar?')) return;
+        try {
+            setBackupStatus('exporting');
+            const exportDate = await importBackup(file);
+            const d = new Date(exportDate).toLocaleString('pt-BR');
+            setBackupStatus('success');
+            setBackupMessage(`Backup de ${d} restaurado com sucesso!`);
+        } catch (err) {
+            setBackupStatus('error');
+            setBackupMessage(err.message || 'Arquivo de backup inválido.');
+        }
+        setTimeout(() => setBackupStatus(null), 5000);
     };
 
     return (
@@ -168,19 +163,55 @@ const Settings = () => {
 
                 {/* Backup Section */}
                 <div className="card">
-                    <h3 style={{ marginBottom: '1rem', color: 'var(--secondary)' }}>Backup de Dados</h3>
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '12px' }}>
+                    <h3 style={{ marginBottom: '8px', color: 'var(--secondary)' }}>Backup de Dados</h3>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '16px', lineHeight: '1.45' }}>
                         Exporte seus dados para não perder ao trocar de celular ou limpar o navegador.
+                        Para migrar para outro dispositivo: exporte aqui, transfira o arquivo e importe no novo aparelho.
                     </p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={handleExport}>
-                            <Download size={18} /> Exportar
+
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: backupStatus ? '12px' : '0' }}>
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ flex: 1 }}
+                            onClick={handleExport}
+                        >
+                            <Download size={18} /> Exportar Backup
                         </button>
-                        <label className="btn" style={{ flex: 1, background: '#E8F5E9', color: '#2E7D32', cursor: 'pointer' }}>
-                            <Upload size={18} /> Importar
-                            <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+                        <label
+                            className="btn"
+                            style={{ flex: 1, background: '#E8F5E9', color: '#2E7D32', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        >
+                            <Upload size={18} /> Importar Backup
+                            <input
+                                type="file"
+                                accept=".json"
+                                onChange={handleImport}
+                                style={{ display: 'none' }}
+                            />
                         </label>
                     </div>
+
+                    {/* Feedback de status */}
+                    {backupStatus && (
+                        <div style={{
+                            marginTop: '10px',
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            background: backupStatus === 'success' ? '#E8F5E9' : backupStatus === 'error' ? '#FFEBEE' : '#E3F2FD',
+                            color: backupStatus === 'success' ? '#2E7D32' : backupStatus === 'error' ? '#C62828' : '#1565C0',
+                        }}>
+                            {backupStatus === 'success' && <CheckCircle size={16} />}
+                            {backupStatus === 'error' && <AlertCircle size={16} />}
+                            {backupStatus === 'exporting' && <span style={{ fontSize: '1rem' }}>⏳</span>}
+                            {backupStatus === 'exporting' ? 'Restaurando dados...' : backupMessage}
+                        </div>
+                    )}
                 </div>
 
                 <div className="floating-action-bar">

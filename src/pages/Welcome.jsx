@@ -1,22 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Wrench, Download, Share, Smartphone, ArrowRight } from 'lucide-react';
+import { Wrench, Download, Share, Smartphone, ArrowRight, LogIn } from 'lucide-react';
+
+// Detecta se o app está rodando instalado como PWA (standalone)
+const isRunningAsPWA = () =>
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
 
 const Welcome = () => {
-    const { user, login } = useApp();
+    const { user, isLoading, login } = useApp();
     const navigate = useNavigate();
-    const [showLogin, setShowLogin] = useState(false);
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [platform, setPlatform] = useState('android');
     const [deferredPrompt, setDeferredPrompt] = useState(null);
 
+    // true = mostrar login direto; false = mostrar instruções de instalação
+    const [showLogin, setShowLogin] = useState(false);
+
+    // Detecta contexto na montagem: só vai direto ao login se for PWA instalado
     useEffect(() => {
-        if (user) {
-            navigate('/calculator');
+        if (isRunningAsPWA()) {
+            setShowLogin(true);
         }
-    }, [user, navigate]);
+        // No browser: sempre mostra instruções de instalação
+    }, []);
 
     // Capture PWA install prompt
     useEffect(() => {
@@ -27,6 +36,13 @@ const Welcome = () => {
         window.addEventListener('beforeinstallprompt', handler);
         return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
+
+    // Se já tem usuário logado, vai direto para o app
+    useEffect(() => {
+        if (!isLoading && user) {
+            navigate('/calculator', { replace: true });
+        }
+    }, [user, isLoading, navigate]);
 
     const handleInstall = async () => {
         if (deferredPrompt) {
@@ -40,88 +56,141 @@ const Welcome = () => {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        if (name.trim()) {
-            if (password.length === 4) {
-                login(name);
-                navigate('/calculator');
-            } else {
-                alert("A senha deve ter 4 dígitos.");
-            }
+        if (!name.trim()) return;
+        if (password.length === 4 && /^\d{4}$/.test(password)) {
+            login(name.trim());
+            navigate('/calculator', { replace: true });
+        } else {
+            alert('A senha deve ter exatamente 4 dígitos numéricos.');
         }
     };
 
+    // Aguarda contexto carregar para evitar flash
+    if (isLoading) return null;
+
+    // ─── TELA DE LOGIN ────────────────────────────────────────────────────────
     if (showLogin) {
         return (
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '85vh' }}>
+            <div style={{
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '85vh'
+            }}>
                 <div style={{ marginBottom: '2rem', color: 'var(--primary)', textAlign: 'center' }}>
-                    <Wrench size={48} />
-                    <h2 style={{ margin: '8px 0 4px' }}>Preço Certo</h2>
-                    <p style={{ color: '#888', fontSize: '0.9rem' }}>Marido de Aluguel</p>
+                    <div style={{
+                        width: '72px', height: '72px', borderRadius: '18px',
+                        background: 'var(--primary)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px'
+                    }}>
+                        <Wrench size={36} color="#fff" />
+                    </div>
+                    <h2 style={{ margin: '0 0 4px', fontSize: '1.5rem', color: '#222' }}>Preço Certo</h2>
+                    <p style={{ color: '#888', fontSize: '0.9rem', margin: 0 }}>Marido de Aluguel</p>
                 </div>
 
-                <form onSubmit={handleLogin} style={{ width: '100%', maxWidth: '350px', background: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                    <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '16px', textAlign: 'center' }}>Acesso ao Sistema</h3>
-                    <div style={{ marginBottom: '12px' }}>
+                <form onSubmit={handleLogin} style={{
+                    width: '100%', maxWidth: '350px',
+                    background: '#fff', padding: '28px 24px',
+                    borderRadius: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)'
+                }}>
+                    <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '20px', textAlign: 'center', color: '#333' }}>
+                        Acesso ao Sistema
+                    </h3>
+                    <div style={{ marginBottom: '14px' }}>
                         <input
                             type="text"
                             placeholder="Seu Nome"
-                            className="minimal"
-                            style={{ border: '1px solid #ddd', background: '#f9f9f9', width: '100%', padding: '12px', borderRadius: '8px', fontSize: '1rem' }}
+                            autoComplete="name"
+                            style={{
+                                width: '100%', padding: '13px 14px', borderRadius: '10px',
+                                border: '1.5px solid #ddd', background: '#fafafa',
+                                fontSize: '1rem', boxSizing: 'border-box', outline: 'none'
+                            }}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
                         />
                     </div>
-                    <div style={{ marginBottom: '20px' }}>
+                    <div style={{ marginBottom: '24px' }}>
                         <input
                             type="tel"
                             placeholder="Senha (4 dígitos)"
                             maxLength={4}
-                            className="minimal"
-                            style={{ border: '1px solid #ddd', background: '#f9f9f9', width: '100%', padding: '12px', borderRadius: '8px', fontSize: '1rem' }}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
+                            inputMode="numeric"
                             pattern="[0-9]{4}"
+                            autoComplete="current-password"
+                            style={{
+                                width: '100%', padding: '13px 14px', borderRadius: '10px',
+                                border: '1.5px solid #ddd', background: '#fafafa',
+                                fontSize: '1rem', boxSizing: 'border-box', outline: 'none',
+                                letterSpacing: '0.3em', textAlign: 'center'
+                            }}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value.replace(/\D/g, ''))}
+                            required
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                        Entrar e Sincronizar
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px' }}
+                    >
+                        <LogIn size={18} /> Entrar
                     </button>
                 </form>
 
-                <button
-                    onClick={() => setShowLogin(false)}
-                    style={{ marginTop: '20px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                    ← Voltar para instruções
-                </button>
+                {/* Mostra link "Instalar app" apenas se ainda não está no PWA */}
+                {!isRunningAsPWA() && (
+                    <button
+                        onClick={() => setShowLogin(false)}
+                        style={{
+                            marginTop: '20px', background: 'none', border: 'none',
+                            color: '#888', cursor: 'pointer', fontSize: '0.85rem',
+                            textDecoration: 'underline'
+                        }}
+                    >
+                        ← Ver instruções de instalação
+                    </button>
+                )}
             </div>
         );
     }
 
+    // ─── TELA DE INSTRUÇÕES (1ª visita no browser) ───────────────────────────
     return (
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '85vh' }}>
 
             {/* Logo */}
             <div style={{ margin: '2rem 0 1.5rem', color: 'var(--primary)', textAlign: 'center' }}>
-                <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                    <Wrench size={40} color="var(--primary)" />
+                <div style={{
+                    width: '80px', height: '80px', borderRadius: '20px',
+                    background: 'var(--primary)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px'
+                }}>
+                    <Wrench size={40} color="#fff" />
                 </div>
-                <h1 style={{ margin: '0 0 4px', fontSize: '1.6rem' }}>Bem-vindo ao</h1>
-                <h1 style={{ margin: 0, fontSize: '1.6rem' }}>Preço Certo</h1>
+                <h1 style={{ margin: '0 0 4px', fontSize: '1.6rem', color: '#222' }}>Bem-vindo ao</h1>
+                <h1 style={{ margin: 0, fontSize: '1.6rem', color: 'var(--primary)' }}>Preço Certo</h1>
             </div>
 
-            <p style={{ color: '#888', textAlign: 'center', maxWidth: '320px', marginBottom: '24px', lineHeight: '1.4' }}>
-                Instale o aplicativo em seu celular para ter acesso rápido, offline e sem barras de navegação.
+            <p style={{ color: '#666', textAlign: 'center', maxWidth: '320px', marginBottom: '24px', lineHeight: '1.5' }}>
+                Instale o aplicativo no seu celular para ter acesso rápido, <strong>offline</strong> e sem barras de navegação.
             </p>
 
             {/* Platform Tabs */}
-            <div style={{ display: 'flex', width: '100%', maxWidth: '350px', border: '1px solid #ddd', borderRadius: '10px', overflow: 'hidden', marginBottom: '20px' }}>
+            <div style={{
+                display: 'flex', width: '100%', maxWidth: '350px',
+                border: '1px solid #ddd', borderRadius: '10px',
+                overflow: 'hidden', marginBottom: '20px'
+            }}>
                 <button
                     onClick={() => setPlatform('android')}
                     style={{
-                        flex: 1, padding: '12px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem',
+                        flex: 1, padding: '12px', border: 'none', cursor: 'pointer',
+                        fontWeight: '600', fontSize: '0.95rem',
                         background: platform === 'android' ? '#fff' : '#f5f5f5',
                         color: platform === 'android' ? '#333' : '#999',
                         borderBottom: platform === 'android' ? '2px solid var(--primary)' : '2px solid transparent'
@@ -132,7 +201,8 @@ const Welcome = () => {
                 <button
                     onClick={() => setPlatform('ios')}
                     style={{
-                        flex: 1, padding: '12px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem',
+                        flex: 1, padding: '12px', border: 'none', cursor: 'pointer',
+                        fontWeight: '600', fontSize: '0.95rem',
                         background: platform === 'ios' ? '#fff' : '#f5f5f5',
                         color: platform === 'ios' ? '#333' : '#999',
                         borderBottom: platform === 'ios' ? '2px solid var(--primary)' : '2px solid transparent'
@@ -143,7 +213,12 @@ const Welcome = () => {
             </div>
 
             {/* Instructions Card */}
-            <div style={{ width: '100%', maxWidth: '350px', background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '16px', border: '1px solid #eee' }}>
+            <div style={{
+                width: '100%', maxWidth: '350px', background: '#fff',
+                borderRadius: '12px', padding: '20px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                marginBottom: '16px', border: '1px solid #eee'
+            }}>
                 {platform === 'android' ? (
                     <>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -153,7 +228,7 @@ const Welcome = () => {
                             <div>
                                 <div style={{ fontWeight: '600', marginBottom: '4px' }}>Passo 1</div>
                                 <div style={{ color: '#666', fontSize: '0.9rem', lineHeight: '1.4' }}>
-                                    Toque no botão abaixo ou no menu do navegador (três pontinhos).
+                                    Toque no menu do navegador (três pontinhos ⋮) no canto superior.
                                 </div>
                             </div>
                         </div>
@@ -170,7 +245,12 @@ const Welcome = () => {
                         </div>
                         <button
                             onClick={handleInstall}
-                            style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#666', color: '#fff', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            style={{
+                                width: '100%', padding: '14px', borderRadius: '10px',
+                                border: 'none', background: 'var(--primary)', color: '#fff',
+                                fontWeight: '600', fontSize: '1rem', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                            }}
                         >
                             <Download size={18} /> Instalar App
                         </button>
@@ -203,12 +283,13 @@ const Welcome = () => {
                 )}
             </div>
 
-            {/* Access Button */}
+            {/* Botão para pular instruções e ir ao login */}
             <div style={{ width: '100%', maxWidth: '350px' }}>
                 <button
                     onClick={() => setShowLogin(true)}
                     style={{
-                        width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff',
+                        width: '100%', padding: '16px', borderRadius: '12px',
+                        border: '1px solid #ddd', background: '#fff',
                         cursor: 'pointer', fontWeight: '600', fontSize: '1rem', color: '#333',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.04)'

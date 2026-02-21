@@ -34,7 +34,7 @@ const Catalog = () => {
     };
 
     return (
-        <div className="page-catalog content-wrapper" style={{ paddingTop: '20px' }}>
+        <div className="page-catalog content-wrapper" style={{ paddingTop: '20px', paddingBottom: 'calc(var(--nav-height) + 24px)' }}>
             <header style={{ marginBottom: '1rem' }}>
                 <h1 style={{ fontSize: '1.5rem' }}>Catálogo de Preços</h1>
             </header>
@@ -125,9 +125,30 @@ const Catalog = () => {
 
             {activeTab === 'reference' && (
                 <div className="reference-list">
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                        Preços médios do mercado (apenas consulta).
-                    </p>
+                    {/* Card de aviso/instrução */}
+                    <div style={{
+                        background: '#FFF8E1',
+                        border: '1px solid #FFE082',
+                        borderRadius: '10px',
+                        padding: '14px 16px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        gap: '10px',
+                        alignItems: 'flex-start'
+                    }}>
+                        <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>💡</span>
+                        <div>
+                            <p style={{ margin: '0 0 4px', fontWeight: '700', fontSize: '0.9rem', color: '#5D4037' }}>
+                                Tabela de Referência — Mercado 2026
+                            </p>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#795548', lineHeight: '1.45' }}>
+                                Estes valores são <strong>sugestões baseadas no mercado brasileiro</strong> e servem apenas como referência.
+                                Os preços reais podem variar conforme sua região, experiência e condições do serviço.
+                                Use a aba <strong>Meus Preços</strong> para cadastrar sua tabela personalizada.
+                            </p>
+                        </div>
+                    </div>
+
                     {referencePrices.map((item) => (
                         <div key={item.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontWeight: '500' }}>{item.name}</span>
